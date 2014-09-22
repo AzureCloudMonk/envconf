@@ -23,8 +23,15 @@ type StorageConfig struct {
 }
 
 type StorageTimeouts struct {
+	*Channels
 	Send    int64
 	Receive int64 `env:"Recv"`
+}
+
+type Channels struct {
+	Registered string `env:"REG"`
+	Active     string
+	Deleted    string `env:"del"`
 }
 
 var environ = []string{
@@ -39,6 +46,9 @@ var environ = []string{
 	"server_storage_max_conns=500",
 	"server_storage_Timeouts_Send=5\t",
 	"server_storage_timeouts_recv=10",
+	"SERVER_STORAGE_TIMEOUTS_REG=3h",
+	"Server_Storage_Timeouts_Active=72h",
+	"server_storage_timeouts_del=24h",
 	"USER",
 }
 
@@ -53,6 +63,11 @@ var expected = &ServerConfig{
 		Hosts:    []string{"[::1]:6160", "127.0.0.1:6160", ":6160"},
 		MaxConns: 500,
 		Timeouts: StorageTimeouts{
+			Channels: &Channels{
+				Registered: "3h",
+				Active:     "72h",
+				Deleted:    "24h",
+			},
 			Send:    5,
 			Receive: 10,
 		},

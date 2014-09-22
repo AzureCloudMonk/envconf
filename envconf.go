@@ -111,15 +111,21 @@ func (env Environment) decodeField(name, sep string, value reflect.Value, fields
 		return nil
 	}
 	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
-		tag := field.Tag.Get("env")
+		fieldTyp := typ.Field(i)
+		tag := fieldTyp.Tag.Get("env")
 		if tag == "-" {
 			continue
 		}
-		if len(tag) == 0 {
-			tag = field.Name
+		field := indirect(value.Field(i))
+		if len(tag) > 0 || field.Kind() != reflect.Struct || !fieldTyp.Anonymous {
+			if len(tag) == 0 {
+				tag = fieldTyp.Name
+			}
+			tag = name + sep + tag
+		} else {
+			tag = name
 		}
-		if err := env.decodeField(name+sep+tag, sep, value.Field(i), fields); err != nil {
+		if err := env.decodeField(tag, sep, field, fields); err != nil {
 			return err
 		}
 	}
