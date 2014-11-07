@@ -3,6 +3,7 @@ package envconf
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 type ServerConfig struct {
@@ -17,9 +18,11 @@ type ServerConfig struct {
 }
 
 type StorageConfig struct {
-	Hosts    []string `env:"hosts"`
-	MaxConns int      `env:"max_conns"`
-	Timeouts StorageTimeouts
+	Hosts      []string `env:"hosts"`
+	conns      int
+	MaxConns   int           `env:"max_conns"`
+	RetryDelay time.Duration `env:"retry_delay"`
+	Timeouts   StorageTimeouts
 }
 
 type StorageTimeouts struct {
@@ -44,6 +47,8 @@ var environ = []string{
 	`SERVER_TAGS=ren,stimpy,hapi\, hapi\, joi\, joi`,
 	"SERVER_STORAGE_HOSTS=[::1]:6160,127.0.0.1:6160,:6160",
 	"server_storage_max_conns=500",
+	"SERVER_STORAGE_CONNS=10",
+	"SERVER_STORAGE_RETRY_DELAY=5s",
 	"server_storage_Timeouts_Send=5\t",
 	"server_storage_timeouts_recv=10",
 	"SERVER_STORAGE_TIMEOUTS_REG=3h",
@@ -60,8 +65,9 @@ var expected = &ServerConfig{
 	KeyFile:   "./server.key",
 	CertFile:  "./server.crt",
 	StorageConfig: StorageConfig{
-		Hosts:    []string{"[::1]:6160", "127.0.0.1:6160", ":6160"},
-		MaxConns: 500,
+		Hosts:      []string{"[::1]:6160", "127.0.0.1:6160", ":6160"},
+		MaxConns:   500,
+		RetryDelay: 5 * time.Second,
 		Timeouts: StorageTimeouts{
 			Channels: &Channels{
 				Registered: "3h",

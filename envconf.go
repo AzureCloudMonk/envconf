@@ -11,7 +11,10 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
+
+var durType = reflect.TypeOf(time.Duration(0))
 
 // Load returns an Environment populated with values from the user environment.
 func Load() Environment {
@@ -134,10 +137,22 @@ func (env Environment) decodeField(name, sep string, value reflect.Value, fields
 
 // decodeLiteral decodes a source string into a value. Only integers, floats,
 // Booleans, slices, and strings are supported.
-func decodeLiteral(source string, value reflect.Value) error {
-	kind := value.Type().Kind()
+func decodeLiteral(source string, value reflect.Value) (err error) {
+	if !value.CanSet() {
+		return nil
+	}
+	typ := value.Type()
+	kind := typ.Kind()
 	if kind >= reflect.Int && kind <= reflect.Int64 {
-		result, err := strconv.ParseInt(source, 0, value.Type().Bits())
+		var result int64
+		if typ == durType {
+			duration, err := time.ParseDuration(source)
+			if err == nil {
+				result = int64(duration)
+			}
+		} else {
+			result, err = strconv.ParseInt(source, 0, value.Type().Bits())
+		}
 		if err != nil {
 			return err
 		}
