@@ -17,7 +17,12 @@ type ServerConfig struct {
 	StorageConfig `env:"storage"`
 }
 
+type engine struct {
+	next, prev *engine
+}
+
 type StorageConfig struct {
+	engines    *engine
 	Hosts      []string `env:"hosts"`
 	conns      int
 	MaxConns   int           `env:"max_conns"`

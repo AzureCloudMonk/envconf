@@ -93,7 +93,11 @@ func (env Environment) decode(prefix, sep string, v interface{}, fields *[]strin
 	if value.Kind() != reflect.Ptr || value.IsNil() {
 		return fmt.Errorf("Non-pointer type '%s'", value.Type())
 	}
-	return env.decodeField(prefix, sep, indirect(value), fields)
+	field, ok := indirect(value)
+	if !ok {
+		return nil
+	}
+	return env.decodeField(prefix, sep, field, fields)
 }
 
 // decodeField decodes an environment variable into a struct field. Literals
@@ -119,7 +123,10 @@ func (env Environment) decodeField(name, sep string, value reflect.Value, fields
 		if tag == "-" {
 			continue
 		}
-		field := indirect(value.Field(i))
+		field, ok := indirect(value.Field(i))
+		if !ok {
+			continue
+		}
 		if len(tag) > 0 || field.Kind() != reflect.Struct || !fieldTyp.Anonymous {
 			if len(tag) == 0 {
 				tag = fieldTyp.Name
@@ -237,7 +244,10 @@ func decodeSlice(source string, value reflect.Value) error {
 	sources := splitList(source)
 	value.SetLen(0)
 	for _, source := range sources {
-		element := indirect(reflect.New(value.Type().Elem()))
+		element, ok := indirect(reflect.New(typ.Elem()))
+		if !ok {
+			continue
+		}
 		if err := decodeLiteral(source, element); err != nil {
 			return err
 		}
@@ -248,14 +258,18 @@ func decodeSlice(source string, value reflect.Value) error {
 
 // indirect returns the value pointed to by a pointer, allocating zero values
 // for nil pointers.
-func indirect(value reflect.Value) reflect.Value {
+func indirect(value reflect.Value) (reflect.Value, bool) {
 	for value.Kind() == reflect.Ptr {
 		if value.IsNil() {
-			value.Set(reflect.New(value.Type().Elem()))
+			if value.CanSet() {
+				value.Set(reflect.New(value.Type().Elem()))
+			} else {
+				return value, false
+			}
 		}
 		value = reflect.Indirect(value)
 	}
-	return value
+	return value, true
 }
 
 // hasPrefixFold is a case-insensitive version of strings.HasPrefix.
