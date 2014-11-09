@@ -6,6 +6,7 @@
 package envconf
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"reflect"
@@ -14,7 +15,10 @@ import (
 	"time"
 )
 
-var durType = reflect.TypeOf(time.Duration(0))
+var (
+	bytesType = reflect.TypeOf([]byte(nil))
+	durType   = reflect.TypeOf(time.Duration(0))
+)
 
 // Load returns an Environment populated with values from the user environment.
 func Load() Environment {
@@ -241,6 +245,15 @@ func splitList(source string) (results []string) {
 // decodeSlice decodes a comma-separated list of values into a slice.
 // Slices are decoded recursively.
 func decodeSlice(source string, value reflect.Value) error {
+	typ := value.Type()
+	if typ == bytesType {
+		results, err := base64.StdEncoding.DecodeString(source)
+		if err != nil {
+			return err
+		}
+		value.SetBytes(results)
+		return nil
+	}
 	sources := splitList(source)
 	value.SetLen(0)
 	for _, source := range sources {

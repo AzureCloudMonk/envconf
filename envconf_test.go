@@ -10,6 +10,7 @@ type ServerConfig struct {
 	Addr          string
 	ID            int32
 	Key           string `env:"-"`
+	LogID         []byte `env:"LOG_ID"`
 	Tags          []string
 	EnableTLS     bool   `env:"enable_tls"`
 	KeyFile       string `env:"key_file"`
@@ -46,6 +47,7 @@ var environ = []string{
 	"SERVER_ADDR= :8080",
 	"SERVER_ID=123",
 	"SERVER_KEY=uQ/OEEc0kFCthCHm9iyorw==",
+	"server_log_id=UbH4XJytSLSMBOYdyR9+7w==",
 	"SERVER_ENABLE_TLS=1",
 	"SERVER_KEY_FILE=./server.key",
 	"SERVER_Cert_File=./server.crt",
@@ -63,8 +65,10 @@ var environ = []string{
 }
 
 var expected = &ServerConfig{
-	Addr:      ":8080",
-	ID:        123,
+	Addr: ":8080",
+	ID:   123,
+	LogID: []byte{0x51, 0xb1, 0xf8, 0x5c, 0x9c, 0xad, 0x48, 0xb4, 0x8c,
+		0x04, 0xe6, 0x1d, 0xc9, 0x1f, 0x7e, 0xef},
 	Tags:      []string{"ren", "stimpy", "hapi, hapi, joi, joi"},
 	EnableTLS: true,
 	KeyFile:   "./server.key",
