@@ -1,0 +1,8 @@
+language: go
+go:
+  - 1.3
+before_script:
+  - go get code.google.com/p/go.tools/cmd/vet
+script:
+  - go vet github.com/kitcambridge/envconf
+  - go test github.com/kitcambridge/envconf
