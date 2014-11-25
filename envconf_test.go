@@ -18,6 +18,12 @@ type ServerConfig struct {
 	StorageConfig `env:"storage"`
 }
 
+type emptyInterface struct {
+	Required   interface{}
+	Ignored    interface{} `env:"-"`
+	unexported interface{}
+}
+
 type engine struct {
 	next, prev *engine
 }
@@ -41,6 +47,27 @@ type Channels struct {
 	Registered string `env:"REG"`
 	Active     string
 	Deleted    string `env:"del"`
+}
+
+var hyphenEnv = []string{
+	"ADDR= :8080",
+	"ID=123",
+	"KEY=uQ/OEEc0kFCthCHm9iyorw==",
+	"log_id=UbH4XJytSLSMBOYdyR9+7w==",
+	"ENABLE_TLS=1",
+	"KEY_FILE=./server.key",
+	"Cert_File=./server.crt",
+	`TAGS=ren,stimpy,hapi\, hapi\, joi\, joi`,
+	"STORAGE-HOSTS=[::1]:6160,127.0.0.1:6160,:6160",
+	"storage-max_conns=500",
+	"STORAGE-CONNS=10",
+	"STORAGE-RETRY_DELAY=5s",
+	"storage-Timeouts-Send=5\t",
+	"storage-timeouts-recv=10",
+	"STORAGE-TIMEOUTS-REG=3h",
+	"Storage-Timeouts-Active=72h",
+	"storage-timeouts-del=24h",
+	"USER",
 }
 
 var environ = []string{
@@ -112,10 +139,12 @@ func TestGet(t *testing.T) {
 	for _, test := range getTests {
 		value, ok := env.Get(test.key)
 		if value != test.value {
-			t.Errorf("On test %v, unexpected value: got %#v; want %#v", test.name, value, test.value)
+			t.Errorf("On test %v, unexpected value: got %#v; want %#v",
+				test.name, value, test.value)
 		}
 		if ok != test.ok {
-			t.Errorf("On test %v, unexpected existence test: got %#v; want %#v", test.name, ok, test.ok)
+			t.Errorf("On test %v, unexpected existence test: got %#v; want %#v",
+				test.name, ok, test.ok)
 		}
 	}
 }
@@ -127,7 +156,8 @@ func TestDecodeNil(t *testing.T) {
 	)
 	env := New(environ)
 	if err := env.Decode("server", "_", nilConfig); err == nil {
-		t.Errorf("Expected error decoding into invalid value %#v", nilConfig)
+		t.Errorf("Expected invalid value error decoding into invalid value %#v",
+			nilConfig)
 	}
 	if err := env.Decode("server", "_", &srvConfig); err != nil {
 		t.Errorf("Error decoding into nil pointer: %s", err)
@@ -135,6 +165,29 @@ func TestDecodeNil(t *testing.T) {
 	if !reflect.DeepEqual(srvConfig, expected) {
 		t.Errorf("Unexpected result decoding into nil pointer: got %#v; want %#v",
 			srvConfig, expected)
+	}
+}
+
+func TestDecodeEmptyInterface(t *testing.T) {
+	var empty *emptyInterface
+	env := New([]string{
+		"required=1",
+		"ignored=hello",
+		"unexported=123",
+	})
+	if err := env.Decode("", "", &empty); err == nil {
+		t.Errorf("Expected unsupported type error decoding into %#v", empty)
+	}
+}
+
+func TestDecodeCustomSep(t *testing.T) {
+	env := New(hyphenEnv)
+	actual := new(ServerConfig)
+	if err := env.Decode("", "-", actual); err != nil {
+		t.Errorf("Error decoding hyphenated environment variables: %s", err)
+	}
+	if !reflect.DeepEqual(actual, expected) {
+		t.Errorf("Unexpected result: got %#v; want %#v", actual, expected)
 	}
 }
 
@@ -153,7 +206,7 @@ func TestDecodeStrict(t *testing.T) {
 	env := New(environ)
 	actual := new(ServerConfig)
 	if err := env.DecodeStrict("server", "_", actual, nil); err == nil {
-		t.Errorf("Expected error decoding environment")
+		t.Errorf("Expected field error decoding environment")
 	}
 	ignoreEnv := map[string]interface{}{"server_key": true}
 	if err := env.DecodeStrict("server", "_", actual, ignoreEnv); err != nil {

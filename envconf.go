@@ -63,7 +63,9 @@ func (env Environment) Decode(prefix, sep string, v interface{}) error {
 
 // DecodeStrict returns an error if env contains prefixed variables that do not
 // correspond to either field names in v, or keys in ignoreEnv.
-func (env Environment) DecodeStrict(prefix, sep string, v interface{}, ignoreEnv map[string]interface{}) error {
+func (env Environment) DecodeStrict(prefix, sep string, v interface{},
+	ignoreEnv map[string]interface{}) error {
+
 	var fields []string
 	if err := env.decode(prefix, sep, v, &fields); err != nil {
 		return err
@@ -92,7 +94,9 @@ getEnv:
 }
 
 // decode decodes env into v.
-func (env Environment) decode(prefix, sep string, v interface{}, fields *[]string) error {
+func (env Environment) decode(prefix, sep string, v interface{},
+	fields *[]string) error {
+
 	value := reflect.ValueOf(v)
 	if !value.IsValid() {
 		return fmt.Errorf("Invalid value '%s'", value)
@@ -104,14 +108,21 @@ func (env Environment) decode(prefix, sep string, v interface{}, fields *[]strin
 	if !ok {
 		return nil
 	}
-	return env.decodeField(prefix, sep, field, fields)
+	var nameParts []string
+	if len(prefix) > 0 {
+		nameParts = append(nameParts, prefix)
+	}
+	return env.decodeField(nameParts, sep, field, fields)
 }
 
 // decodeField decodes an environment variable into a struct field. Literals
 // are decoded directly into the value; structs are decoded recursively.
-func (env Environment) decodeField(name, sep string, value reflect.Value, fields *[]string) error {
+func (env Environment) decodeField(nameParts []string, sep string,
+	value reflect.Value, fields *[]string) error {
+
 	typ := value.Type()
 	if typ.Kind() != reflect.Struct {
+		name := strings.Join(nameParts, sep)
 		source, ok := env.Get(name)
 		if !ok {
 			return nil
@@ -134,15 +145,16 @@ func (env Environment) decodeField(name, sep string, value reflect.Value, fields
 		if !ok {
 			continue
 		}
+		var tagParts []string
 		if len(tag) > 0 || field.Kind() != reflect.Struct || !fieldTyp.Anonymous {
 			if len(tag) == 0 {
 				tag = fieldTyp.Name
 			}
-			tag = name + sep + tag
+			tagParts = append(nameParts, tag)
 		} else {
-			tag = name
+			tagParts = nameParts
 		}
-		if err := env.decodeField(tag, sep, field, fields); err != nil {
+		if err := env.decodeField(tagParts, sep, field, fields); err != nil {
 			return err
 		}
 	}
