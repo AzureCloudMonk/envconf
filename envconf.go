@@ -94,6 +94,9 @@ getEnv:
 // decode decodes env into v.
 func (env Environment) decode(prefix, sep string, v interface{}, fields *[]string) error {
 	value := reflect.ValueOf(v)
+	if !value.IsValid() {
+		return fmt.Errorf("Invalid value '%s'", value)
+	}
 	if value.Kind() != reflect.Ptr || value.IsNil() {
 		return fmt.Errorf("Non-pointer type '%s'", value.Type())
 	}

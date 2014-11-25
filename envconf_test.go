@@ -120,11 +120,29 @@ func TestGet(t *testing.T) {
 	}
 }
 
+func TestDecodeNil(t *testing.T) {
+	var (
+		nilConfig interface{}
+		srvConfig *ServerConfig
+	)
+	env := New(environ)
+	if err := env.Decode("server", "_", nilConfig); err == nil {
+		t.Errorf("Expected error decoding into invalid value %#v", nilConfig)
+	}
+	if err := env.Decode("server", "_", &srvConfig); err != nil {
+		t.Errorf("Error decoding into nil pointer: %s", err)
+	}
+	if !reflect.DeepEqual(srvConfig, expected) {
+		t.Errorf("Unexpected result decoding into nil pointer: got %#v; want %#v",
+			srvConfig, expected)
+	}
+}
+
 func TestDecode(t *testing.T) {
 	env := New(environ)
 	actual := new(ServerConfig)
 	if err := env.Decode("server", "_", actual); err != nil {
-		t.Errorf("Error decoding environment: %#v", err)
+		t.Errorf("Error decoding environment: %s", err)
 	}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Unexpected result: got %#v; want %#v", actual, expected)
@@ -135,11 +153,11 @@ func TestDecodeStrict(t *testing.T) {
 	env := New(environ)
 	actual := new(ServerConfig)
 	if err := env.DecodeStrict("server", "_", actual, nil); err == nil {
-		t.Errorf("Expected error decoding environment, got %#v", err)
+		t.Errorf("Expected error decoding environment")
 	}
 	ignoreEnv := map[string]interface{}{"server_key": true}
 	if err := env.DecodeStrict("server", "_", actual, ignoreEnv); err != nil {
-		t.Errorf("Unexpected error decoding environment: %#v", err)
+		t.Errorf("Unexpected error decoding environment: %s", err)
 	}
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("Unexpected result: got %#v; want %#v", actual, expected)
