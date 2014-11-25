@@ -117,7 +117,7 @@ func (env Environment) decodeField(name, sep string, value reflect.Value, fields
 			return nil
 		}
 		if err := decodeLiteral(source, value); err != nil {
-			return nil
+			return err
 		}
 		if fields != nil {
 			*fields = append(*fields, name)
